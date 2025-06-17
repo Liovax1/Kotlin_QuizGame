@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -60,38 +61,33 @@ fun QuizScreen(viewModel: QuizGameViewModel, categoryId: Int, onQuizFinished: (I
     val currentIndex by viewModel.currentIndex.collectAsState()
     val error by viewModel.error.collectAsState()
     val questionTranslated by viewModel.question.collectAsState()
+    val answers by viewModel.answers.collectAsState()
 
     LaunchedEffect(categoryId) {
         viewModel.fetchQuestions(categoryId)
     }
 
-    LaunchedEffect(currentIndex) {
-        if (questions.isNotEmpty())
-            viewModel.translateToFrench(questions.get(currentIndex).question)
-    }
-
-    if (questions.isNotEmpty() && currentIndex < questions.size) {
+    if (questions.isNotEmpty() && questionTranslated != null && currentIndex < questions.size && answers.isNotEmpty()) {
         val q = questions[currentIndex]
-        val allAnswers = remember(q) { (q.incorrect_answers + q.correct_answer).shuffled() }
         Column(
             modifier = Modifier.fillMaxSize().padding(32.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Question ${currentIndex + 1}", style = MaterialTheme.typography.titleLarge)
-            Text(questionTranslated ?: "TOTO111", modifier = Modifier.padding(vertical = 16.dp))
-            allAnswers.forEach { answer ->
+            Text(questionTranslated ?: "", modifier = Modifier.padding(vertical = 16.dp))
+            answers.forEach { answer ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = selectedAnswer == answer,
                         onClick = { selectedAnswer = answer }
                     )
-                    Text(URLDecoder.decode(answer, "UTF-8"))
+                    Text(answer)
                 }
             }
             Button(
                 onClick = {
-                    if (selectedAnswer == URLDecoder.decode(q.correct_answer, "UTF-8")) score++
+                    if (selectedAnswer == answers.find { it == answerEquivalent(q.correct_answer, answers) }) score++
                     if (currentIndex == questions.size - 1) {
                         onQuizFinished(score, questions.size)
                     } else {
@@ -106,5 +102,13 @@ fun QuizScreen(viewModel: QuizGameViewModel, categoryId: Int, onQuizFinished: (I
         }
     } else if (error != null) {
         Text(error ?: "Erreur inconnue", color = MaterialTheme.colorScheme.error)
+    } else {
+        CircularProgressIndicator()
     }
+}
+
+// Fonction utilitaire pour retrouver la bonne réponse traduite dans la liste
+private fun answerEquivalent(correct: String, answers: List<String>): String? {
+    // On suppose que la traduction conserve l'ordre, sinon on peut améliorer la logique
+    return answers.find { it == correct }
 }

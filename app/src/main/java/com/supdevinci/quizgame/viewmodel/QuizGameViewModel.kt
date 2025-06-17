@@ -31,6 +31,7 @@ class QuizGameViewModel : ViewModel() {
     val error: StateFlow<String?> = _error
 
     val question = MutableStateFlow<String?>(null)
+    val answers = MutableStateFlow<List<String>>(emptyList())
 
     var translator : Translator? = null
 
@@ -46,7 +47,7 @@ class QuizGameViewModel : ViewModel() {
             .build()
         translator!!.downloadModelIfNeeded(conditions)
             .addOnSuccessListener {
-                println("TEST SUCCESS")
+
             }
             .addOnFailureListener { exception ->
                 println("TEST FAILED")
@@ -60,14 +61,15 @@ class QuizGameViewModel : ViewModel() {
                 if (response.response_code == 0 && response.results.isNotEmpty()) {
                     val translated = response.results.map { q ->
                         q.copy(
-                            question = q.question,
-                            correct_answer = q.correct_answer,
-                            incorrect_answers = q.incorrect_answers
+                            question = decodeUtf8(q.question),
+                            correct_answer = decodeUtf8(q.correct_answer),
+                            incorrect_answers = q.incorrect_answers.map { decodeUtf8(it) }
                         )
                     }
                     _questions.value = translated
                     _currentIndex.value = 0
                     _error.value = null
+                    translateToFrench(questions.value.get(_currentIndex.value).question)
                 } else {
                     _error.value = "Aucune question trouvée."
                 }
@@ -77,20 +79,53 @@ class QuizGameViewModel : ViewModel() {
         }
     }
 
+    private fun decodeUtf8(text: String): String {
+        return try {
+            java.net.URLDecoder.decode(text, "UTF-8")
+        } catch (e: Exception) {
+            text
+        }
+    }
+
     fun translateToFrench(text: String) {
-        translator?.translate(text)
-             ?.addOnSuccessListener { translatedText ->
-                 question.value = translatedText
-                 _error.value = ""
-             }
-             ?.addOnFailureListener { exception ->
-                 _error.value = exception.message
-             }
+        val q = questions.value.getOrNull(_currentIndex.value)
+        if (q == null) return
+        // Traduire la question
+        translator?.translate(q.question)
+            ?.addOnSuccessListener { translatedText ->
+                question.value = translatedText
+                // Traduire toutes les réponses (correcte + incorrectes)
+                val allAnswers = q.incorrect_answers + q.correct_answer
+                val translatedList = mutableListOf<String>()
+                var count = 0
+                allAnswers.forEach { ans ->
+                    translator?.translate(ans)
+                        ?.addOnSuccessListener { translatedAns ->
+                            translatedList.add(translatedAns)
+                            count++
+                            if (count == allAnswers.size) {
+                                answers.value = translatedList.shuffled()
+                            }
+                        }
+                        ?.addOnFailureListener {
+                            translatedList.add(ans)
+                            count++
+                            if (count == allAnswers.size) {
+                                answers.value = translatedList.shuffled()
+                            }
+                        }
+                }
+                _error.value = ""
+            }
+            ?.addOnFailureListener { exception ->
+                _error.value = exception.message
+            }
     }
 
     fun nextQuestion() {
         if (_currentIndex.value < _questions.value.size - 1) {
             _currentIndex.value += 1
+            translateToFrench(questions.value.get(_currentIndex.value).question)
         }
     }
 
