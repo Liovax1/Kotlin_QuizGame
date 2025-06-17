@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.supdevinci.quizgame.viewmodel.QuizGameViewModel
 import com.supdevinci.quizgame.ui.theme.QuizGameTheme
+import kotlinx.coroutines.launch
 import java.net.URLDecoder
 
 class QuizActivity : ComponentActivity() {
@@ -58,9 +59,15 @@ fun QuizScreen(viewModel: QuizGameViewModel, categoryId: Int, onQuizFinished: (I
     val questions by viewModel.questions.collectAsState()
     val currentIndex by viewModel.currentIndex.collectAsState()
     val error by viewModel.error.collectAsState()
+    val questionTranslated by viewModel.question.collectAsState()
 
     LaunchedEffect(categoryId) {
         viewModel.fetchQuestions(categoryId)
+    }
+
+    LaunchedEffect(currentIndex) {
+        if (questions.isNotEmpty())
+            viewModel.translateToFrench(questions.get(currentIndex).question)
     }
 
     if (questions.isNotEmpty() && currentIndex < questions.size) {
@@ -72,7 +79,7 @@ fun QuizScreen(viewModel: QuizGameViewModel, categoryId: Int, onQuizFinished: (I
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Question ${currentIndex + 1}", style = MaterialTheme.typography.titleLarge)
-            Text(URLDecoder.decode(q.question, "UTF-8"), modifier = Modifier.padding(vertical = 16.dp))
+            Text(questionTranslated ?: "TOTO111", modifier = Modifier.padding(vertical = 16.dp))
             allAnswers.forEach { answer ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(

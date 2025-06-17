@@ -4,31 +4,24 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.supdevinci.quizgame.ui.theme.QuizGameTheme
+
+data class Category(val name: String, val id: Int)
 
 class CategoryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            QuizGameTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    CategoryScreen { categoryId ->
-                        val intent = Intent(this, QuizActivity::class.java)
-                        intent.putExtra("categoryId", categoryId)
-                        startActivity(intent)
-                    }
+            MaterialTheme {
+                CategoryScreen { categoryId ->
+                    val intent = Intent(this, QuizActivity::class.java)
+                    intent.putExtra("categoryId", categoryId)
+                    startActivity(intent)
                 }
             }
         }
@@ -54,28 +47,43 @@ fun CategoryScreen(onStartQuiz: (Int) -> Unit) {
             Category("Véhicules", 28)
         )
     }
+    var expanded by remember { mutableStateOf(false) }
     var selectedIndex by remember { mutableStateOf(0) }
+
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Choisissez une catégorie", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
-        androidx.compose.material3.DropdownMenu(
-            expanded = true,
-            onDismissRequest = {},
+        Text(
+            "Choisissez une catégorie",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Button(onClick = { expanded = true }) {
+            Text(categories[selectedIndex].name)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
         ) {
             categories.forEachIndexed { index, category ->
-                androidx.compose.material3.DropdownMenuItem(
+                DropdownMenuItem(
                     text = { Text(category.name) },
-                    onClick = { selectedIndex = index }
+                    onClick = {
+                        selectedIndex = index
+                        expanded = false
+                    }
                 )
             }
         }
-        Button(onClick = { onStartQuiz(categories[selectedIndex].id) }, modifier = Modifier.padding(top = 24.dp)) {
+        Button(
+            onClick = { onStartQuiz(categories[selectedIndex].id) },
+            modifier = Modifier.padding(top = 24.dp)
+        ) {
             Text("Commencer le quiz")
         }
     }
 }
-
-class Category(val name: String, val id: Int)

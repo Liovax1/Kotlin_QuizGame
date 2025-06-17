@@ -64,4 +64,6 @@ dependencies {
     implementation ("androidx.room:room-runtime:2.5.2")
     kapt("androidx.room:room-compiler:2.5.2")
     implementation ("androidx.room:room-ktx:2.5.2")
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation ("com.google.mlkit:translate:17.0.3")
 }
