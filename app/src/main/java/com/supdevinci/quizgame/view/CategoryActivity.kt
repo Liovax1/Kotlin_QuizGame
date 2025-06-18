@@ -4,12 +4,18 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.supdevinci.quizgame.ui.theme.QuizGameTheme
 
 data class Category(val name: String, val id: Int)
 
@@ -17,11 +23,13 @@ class CategoryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                CategoryScreen { categoryId ->
-                    val intent = Intent(this, QuizActivity::class.java)
-                    intent.putExtra("categoryId", categoryId)
-                    startActivity(intent)
+            QuizGameTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    CategoryScreen { categoryId ->
+                        val intent = Intent(this, QuizActivity::class.java)
+                        intent.putExtra("categoryId", categoryId)
+                        startActivity(intent)
+                    }
                 }
             }
         }
@@ -53,18 +61,28 @@ fun CategoryScreen(onStartQuiz: (Int) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            "Choisissez une catégorie",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        Button(onClick = { expanded = true }) {
-            Text(categories[selectedIndex].name)
+        Text("Choisissez une catégorie", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Zone de sélection stylisée différemment
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp))
+                .clickable { expanded = true }
+                .padding(16.dp)
+        ) {
+            Text(
+                text = categories[selectedIndex].name,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
@@ -79,9 +97,15 @@ fun CategoryScreen(onStartQuiz: (Int) -> Unit) {
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
         Button(
             onClick = { onStartQuiz(categories[selectedIndex].id) },
-            modifier = Modifier.padding(top = 24.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(10.dp)
         ) {
             Text("Commencer le quiz")
         }

@@ -14,6 +14,7 @@ import java.net.URLDecoder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import retrofit2.create
@@ -32,6 +33,14 @@ class QuizGameViewModel : ViewModel() {
 
     val question = MutableStateFlow<String?>(null)
     val answers = MutableStateFlow<List<String>>(emptyList())
+
+    // Ajout du score dans le ViewModel
+    private val _score = MutableStateFlow(0)
+    val score: StateFlow<Int> = _score
+
+    // Ajout d'une variable pour stocker la bonne réponse traduite
+    private val _correctAnswerTranslated = MutableStateFlow<String?>(null)
+    val correctAnswerTranslated: StateFlow<String?> = _correctAnswerTranslated
 
     var translator : Translator? = null
 
@@ -68,8 +77,10 @@ class QuizGameViewModel : ViewModel() {
                     }
                     _questions.value = translated
                     _currentIndex.value = 0
+                    _score.value = 0 // Réinitialise le score à chaque nouveau quiz
                     _error.value = null
-                    translateToFrench(questions.value.get(_currentIndex.value).question)
+                    translateToFrenchQuestion()
+                    translateToFrenchAnswers()
                 } else {
                     _error.value = "Aucune question trouvée."
                 }
@@ -87,34 +98,44 @@ class QuizGameViewModel : ViewModel() {
         }
     }
 
-    fun translateToFrench(text: String) {
+    fun translateToFrenchAnswers() {
         val q = questions.value.getOrNull(_currentIndex.value)
         if (q == null) return
-        // Traduire la question
+        val allAnswers = q.incorrect_answers + q.correct_answer
+        val translatedList = mutableListOf<String>()
+        var count = 0
+        allAnswers.forEach { ans ->
+            translator?.translate(ans)
+                ?.addOnSuccessListener { translatedAns ->
+                    translatedList.add(translatedAns)
+                    // On mémorise la traduction de la bonne réponse
+                    if (ans == q.correct_answer) {
+                        _correctAnswerTranslated.value = translatedAns
+                    }
+                    count++
+                    if (count == allAnswers.size) {
+                        answers.value = translatedList.shuffled()
+                    }
+                }
+                ?.addOnFailureListener {
+                    translatedList.add(ans)
+                    if (ans == q.correct_answer) {
+                        _correctAnswerTranslated.value = ans
+                    }
+                    count++
+                    if (count == allAnswers.size) {
+                        answers.value = translatedList.shuffled()
+                    }
+                }
+        }
+    }
+    fun translateToFrenchQuestion() {
+        val q = questions.value.getOrNull(_currentIndex.value)
+        if (q == null) return
+
         translator?.translate(q.question)
             ?.addOnSuccessListener { translatedText ->
                 question.value = translatedText
-                // Traduire toutes les réponses (correcte + incorrectes)
-                val allAnswers = q.incorrect_answers + q.correct_answer
-                val translatedList = mutableListOf<String>()
-                var count = 0
-                allAnswers.forEach { ans ->
-                    translator?.translate(ans)
-                        ?.addOnSuccessListener { translatedAns ->
-                            translatedList.add(translatedAns)
-                            count++
-                            if (count == allAnswers.size) {
-                                answers.value = translatedList.shuffled()
-                            }
-                        }
-                        ?.addOnFailureListener {
-                            translatedList.add(ans)
-                            count++
-                            if (count == allAnswers.size) {
-                                answers.value = translatedList.shuffled()
-                            }
-                        }
-                }
                 _error.value = ""
             }
             ?.addOnFailureListener { exception ->
@@ -122,16 +143,28 @@ class QuizGameViewModel : ViewModel() {
             }
     }
 
+    // Nouvelle fonction pour vérifier la réponse et incrémenter le score
+    fun submitAnswer(selectedAnswer: String) {
+        val q = _questions.value.getOrNull(_currentIndex.value) ?: return
+        val correctTranslated = _correctAnswerTranslated.value
+        println("Bonne réponse attendue (affichée à l'utilisateur) : $correctTranslated")
+        if (selectedAnswer == correctTranslated) {
+            _score.value = _score.value + 1
+        }
+    }
+
     fun nextQuestion() {
         if (_currentIndex.value < _questions.value.size - 1) {
             _currentIndex.value += 1
-            translateToFrench(questions.value.get(_currentIndex.value).question)
+            translateToFrenchQuestion()
+            translateToFrenchAnswers()
         }
     }
 
     fun reset() {
         _questions.value = emptyList()
         _currentIndex.value = 0
+        _score.value = 0
         _error.value = null
     }
 }
