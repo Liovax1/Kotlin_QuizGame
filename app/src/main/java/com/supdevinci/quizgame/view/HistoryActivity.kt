@@ -4,7 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.supdevinci.quizgame.data.AppDatabase
 import com.supdevinci.quizgame.data.ScoreHistory
@@ -69,72 +74,92 @@ fun HistoryScreen() {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Historique des scores", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(24.dp))
-        if (scores.isEmpty()) {
-            Text("Aucun score enregistré.")
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                items(scores) { score ->
-                    val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(score.date))
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(id = com.supdevinci.quizgame.R.drawable.fond_global_app),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+        )
+        IconButton(
+            onClick = {
+                val intent = Intent(context, HomeActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            },
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = com.supdevinci.quizgame.R.drawable.ic_arrow_back),
+                contentDescription = "Retour",
+                tint = Color.White
+            )
+        }
+        Column(
+            modifier = Modifier
+                .padding(24.dp)
+                .align(Alignment.Center), // Centrage vertical et horizontal
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Historique des scores",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White // Titre en blanc
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            if (scores.isEmpty()) {
+                Text("Aucun score enregistré.")
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    items(scores) { score ->
+                        val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(score.date))
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
-                            Text("Score : ${score.score}/${score.total}")
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text(date, style = MaterialTheme.typography.bodySmall)
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Score : ${score.score}/${score.total}")
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(date, style = MaterialTheme.typography.bodySmall)
+                            }
                         }
                     }
                 }
             }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            val intent = Intent(context, HomeActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-        }) {
-            Text("Retour à l'accueil")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            showDialog = true
-        }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))) {
-            Text("Supprimer l'historique")
-        }
-        if (showDialog) {
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = { showDialog = false },
-                title = { Text("Confirmation") },
-                text = { Text("Voulez-vous vraiment supprimer tout l'historique des scores ?") },
-                confirmButton = {
-                    Button(onClick = {
-                        showDialog = false
-                        val db = AppDatabase.getDatabase(context)
-                        scope.launch {
-                            db.scoreDao().deleteAllScores()
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = {
+                showDialog = true
+            }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))) {
+                Text("Supprimer l'historique")
+            }
+            if (showDialog) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showDialog = false },
+                    title = { Text("Confirmation") },
+                    text = { Text("Voulez-vous vraiment supprimer tout l'historique des scores ?") },
+                    confirmButton = {
+                        Button(onClick = {
+                            showDialog = false
+                            val db = AppDatabase.getDatabase(context)
+                            scope.launch {
+                                db.scoreDao().deleteAllScores()
+                            }
+                        }) {
+                            Text("Oui")
                         }
-                    }) {
-                        Text("Oui")
+                    },
+                    dismissButton = {
+                        Button(onClick = { showDialog = false }) {
+                            Text("Non")
+                        }
                     }
-                },
-                dismissButton = {
-                    Button(onClick = { showDialog = false }) {
-                        Text("Non")
-                    }
-                }
-            )
+                )
+            }
         }
     }
 }
