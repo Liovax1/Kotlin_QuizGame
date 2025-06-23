@@ -11,4 +11,7 @@ interface ScoreDao {
 
     @Query("SELECT * FROM score_history ORDER BY date DESC")
     suspend fun getAllScores(): List<ScoreHistory>
+
+    @Query("DELETE FROM score_history")
+    suspend fun deleteAllScores()
 }
